@@ -1,0 +1,476 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+
+    <title>Scalable, polyglot, observable news analysis</title>
+    <link rel="shortcut icon" href="./favicon.ico" />
+    <link rel="stylesheet" href="./dist/reset.css" />
+    <link rel="stylesheet" href="./dist/reveal.css" />
+    <link rel="stylesheet" href="./dist/theme/white.css" id="theme" />
+    <link rel="stylesheet" href="./css/highlight/base16/zenburn.css" />
+
+
+  </head>
+  <body>
+    <div class="reveal">
+      <div class="slides"><section ><section data-markdown><script type="text/template">
+
+# Polyglot, scalable, observable news analysis
+
+Timm Heuss
+
+April 2023
+
+</script></section><section data-markdown><script type="text/template">
+
+<!-- .slide: data-background="https://i.stack.imgur.com/wVfnh.jpg" -->
+
+</script></section></section><section  data-markdown><script type="text/template">
+
+This low-key session will be about a custom news crawling and analysis solution I've been building and improving for years now. The talk will cover the challenges I faced and how I evolved the architecture over time to eventually end up with a scalable, polyglot, observable system. We will also reflect about the beauty of open source on GitHub and message queues. In the hands-on session, we will scale the application interactively and monitor the performance in real-time.
+
+Tech-Keywords: Docker, NATS.io, Prometheus, Loki, Grafana, Golang, Python
+
+</script></section><section ><section data-markdown><script type="text/template">
+
+## Motivation & Idea
+
+</script></section><section data-markdown><script type="text/template">
+
+1. Staying up to date is key.
+1. But there's too much information out there.
+1. Also, don't trust centralised approaches.
+
+</script></section><section data-markdown><script type="text/template">
+
+Why don't let _my machine_
+
+find _relevant information for me_?
+
+</script></section><section data-markdown><script type="text/template">
+
+### RSS
+
+Rich Site Summary
+
+</script></section><section data-markdown><script type="text/template">
+
+#### How many RSS feeds are delivered today
+
+![](rss.png)
+
+</script></section><section data-markdown><script type="text/template">
+
+#### How they look like with fivefilters
+
+![](rss-enriched.png)
+
+</script></section><section data-markdown><script type="text/template">
+
+### News Analysis in a nutshell
+
+Have lists of RSS feeds.
+
+Enrich them with fivefilters.
+
+Match regexp against article full texts.
+
+</script></section></section><section ><section data-markdown><script type="text/template">
+
+## Basic components
+
+</script></section><section data-markdown><script type="text/template">
+
+### It's all about URLs!
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-10.svg)
+
+**article_urls**: URLs of articles from the internet
+
+**match_urls**: URLs that match my interests
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-9.svg)
+
+~50 feeds from manually curated sources
+
+~630 feeds from [kilimchoi/engineering-blogs](https://github.com/kilimchoi/engineering-blogs)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-8.svg)
+
+**keyword-matcher** retrieves articles, matches against predefined regexes, puts successful matches on **match_urls** queue
+
+</script></section><section data-markdown><script type="text/template">
+
+#### keywords.txt
+
+```text
+# Simple name-dropping
+Strange Loop
+
+# Positive lookaheads
+(?i)^(?=.*(docker))(?=.*(alternative|anti pattern|best practice|goodbye|ranger|podman|cli|benchmark)).*
+```
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-8.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-7.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-6.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+#### Matching centerpiece
+
+```go
+queue.WithArticleUrls(func(m *nats.Msg) {
+    var url = string(m.Data)
+
+    var fulltext = fulltextrss.RetrieveFullText(url)
+
+    var text = prepareAndCleanString(fulltext)
+
+    var match, regexId = keywords.Match(text)
+
+    if match {
+      queue.PushToPocket(model.Match{
+        Url:     url,
+        RegexId: regexId,
+      })
+    }
+```
+
+<https://github.com/heussd/nats-news-analysis/tree/main/keyword-matcher-go>
+
+</script></section></section><section  data-markdown><script type="text/template">
+
+![](architecture.drawio-6.svg)
+
+</script></section><section ><section data-markdown><script type="text/template">
+
+## Polyglotness
+
+![](nats-horizontal-color.png)
+
+</script></section><section data-markdown><script type="text/template">
+
+| Project | Client languages |
+| :-----: | :--------------: |
+|  NATS   |        29        |
+|  Kafka  |        18        |
+| Pulsar  |        7         |
+| Rabbit  |        10        |
+
+<https://docs.nats.io/nats-concepts/overview/compare-nats>
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-6.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-6-python.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-6-go.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-6-python-go.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+### Python vs. Go
+
+| Metric             | Python  | Golang  | Comparison                |
+| ------------------ | ------- | ------- | ------------------------- |
+| Docker image size  | 424MB   | 6.09MB  | Go is ~70x smaller        |
+| Memory consumption | 23,8MiB | 8,33MiB | Go needs ~3x less memory  |
+| LoC                | 447     | 485     | Python has ~8% less lines |
+
+</script></section><section data-markdown><script type="text/template">
+
+### Python vs. Go execution performance?
+
+Its complicated.
+
+</script></section></section><section ><section data-markdown><script type="text/template">
+
+## Scalability
+
+![](horizontal-logo-monochromatic-white.webp)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-6.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+### Scaling with docker compose
+
+```yaml
+keyword-matcher-go:
+  scale: 4
+  image: ghcr.io/heussd/nats-news-analysis/keyword-matcher-go:latest
+```
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-6.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-5.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+### Parallel feeders
+
+```yaml
+  rss-article-url-feeder-go-1st:
+    image: ghcr.io/heussd/nats-news-analysis/rss-article-url-feeder-go:latest
+    [...]
+    volumes:
+      - type: bind
+        source: ./urls-primary.txt
+        target: /urls.txt
+        consistency: cached
+        read_only: true
+  rss-article-url-feeder-go-2nd:
+    [...]
+    image: ghcr.io/heussd/nats-news-analysis/rss-article-url-feeder-go:latest
+    volumes:
+      - type: bind
+        source: ./urls-secondary.txt
+        target: /urls.txt
+        consistency: cached
+        read_only: true
+
+```
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-5.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-4.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+### Simple nginx load balancer
+
+```config
+
+events { worker_connections 1024; }
+
+http {
+ upstream fullfeedrss {
+    server nats-news-analysis_fullfeedrss_1:80;
+    server nats-news-analysis_fullfeedrss_2:80;
+ }
+ server {
+    listen 80;
+    location / {
+       proxy_pass http://fullfeedrss;
+    }
+  }
+}
+
+```
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-4.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-3.svg)
+
+</script></section></section><section ><section data-markdown><script type="text/template">
+
+## Observability
+
+![](obs.png)
+
+</script></section><section data-markdown><script type="text/template">
+
+### Loki
+
+- Push principle
+- One or more containers push their logs to Loki
+- [Docker driver](https://grafana.com/docs/loki/latest/clients/docker-driver/)
+
+</script></section><section data-markdown><script type="text/template">
+
+#### Setup loki in docker-compose
+
+```yaml
+services:
+  service:
+  	[...]
+    logging:
+      driver: loki
+      options:
+        loki-url: "http://host.docker.internal:3100/loki/api/v1/push"
+```
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-3.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-2.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+### Prometheus
+
+- Pull principle
+- One container exposes an metrics endpoint
+- Additional tooling exports metrics to Prom instance
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio-2.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+## ![](architecture.drawio-1.svg)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](architecture.drawio.svg)
+
+</script></section></section><section  data-markdown><script type="text/template">
+
+![](architecture.drawio.svg)
+
+</script></section><section  data-markdown><script type="text/template">
+
+## 🙌 Hands on 🙌
+
+</script></section><section ><section data-markdown><script type="text/template">
+
+## Reflections
+
+</script></section><section data-markdown><script type="text/template">
+
+### Beauty of Cloud-native
+
+</script></section><section data-markdown><script type="text/template">
+
+![](nats-horizontal-color.png)
+
+Polyglotness + Scalability
+
+</script></section><section data-markdown><script type="text/template">
+
+#### ~170 LoC Docker Compose
+
+- [rss-article-url-feeder-go](https://ghcr.io/heussd/nats-news-analysis/rss-article-url-feeder-go)
+- [keyword-matcher-go](https://ghcr.io/heussd/nats-news-analysis/keyword-matcher-go)
+- [pocket-integration](https://ghcr.io/heussd/nats-news-analysis/pocket-integration)
+- [fivefilters-full-text-rss](https://hub.docker.com/r/heussd/fivefilters-full-text-rss)
+- [nats](https://hub.docker.com/_/nats)
+- [NGINX](https://www.nginx.com/)
+- [Prometheus NATS Exporter](https://github.com/nats-io/prometheus-nats-exporter)
+- [Prometheus](https://prometheus.io/)
+- [Grafana Loki](https://grafana.com/oss/loki/)
+- [Grafana](https://grafana.com/grafana/)
+
+</script></section><section data-markdown><script type="text/template">
+
+### Beauty of Open Source (at GitHub)
+
+</script></section><section data-markdown><script type="text/template">
+
+![](cool-github-1.png)
+
+GitHub employees have your back ❤️
+
+</script></section><section data-markdown><script type="text/template">
+
+![](cool-github-2.png)
+
+GitHub bots have your back ❤️
+
+</script></section><section data-markdown><script type="text/template">
+
+![](cool-github-3.png)
+
+The community is talking code ❤️
+
+</script></section><section data-markdown><script type="text/template">
+
+## Links
+
+- <https://github.com/heussd/nats-news-analysis>
+</script></section></section></div>
+    </div>
+
+    <script src="./dist/reveal.js"></script>
+
+    <script src="./plugin/markdown/markdown.js"></script>
+    <script src="./plugin/highlight/highlight.js"></script>
+    <script src="./plugin/zoom/zoom.js"></script>
+    <script src="./plugin/notes/notes.js"></script>
+    <script src="./plugin/math/math.js"></script>
+    <script>
+      function extend() {
+        var target = {};
+        for (var i = 0; i < arguments.length; i++) {
+          var source = arguments[i];
+          for (var key in source) {
+            if (source.hasOwnProperty(key)) {
+              target[key] = source[key];
+            }
+          }
+        }
+        return target;
+      }
+
+      // default options to init reveal.js
+      var defaultOptions = {
+        controls: true,
+        progress: true,
+        history: true,
+        center: true,
+        transition: 'default', // none/fade/slide/convex/concave/zoom
+        slideNumber: true,
+        plugins: [
+          RevealMarkdown,
+          RevealHighlight,
+          RevealZoom,
+          RevealNotes,
+          RevealMath
+        ]
+      };
+
+      // options from URL query string
+      var queryOptions = Reveal().getQueryHash() || {};
+
+      var options = extend(defaultOptions, {"transition":"fade"}, queryOptions);
+    </script>
+
+
+    <script>
+      Reveal.initialize(options);
+    </script>
+  </body>
+</html>
