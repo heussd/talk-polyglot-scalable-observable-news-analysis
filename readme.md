@@ -35,7 +35,7 @@ Tech-Keywords: Docker, NATS.io, Prometheus, Loki, Grafana, Golang, Python
 
 ---
 
-Why don't let _my machine_
+Why not let _my machine_
 
 find _relevant information for me_?
 
@@ -71,11 +71,15 @@ Match regexp against article full texts.
 
 ## Basic components
 
+- NATS queue
+- Article URL Feeder
+- Keyword Matcher
+- Pocket Integration
+- Fivefilters
+
 ---
 
 ### It's all about URLs!
-
----
 
 ![](architecture.drawio-10.svg)
 
@@ -85,6 +89,8 @@ Match regexp against article full texts.
 
 ---
 
+### Article URL Feeder
+
 ![](architecture.drawio-9.svg)
 
 ~50 feeds from manually curated sources
@@ -93,9 +99,11 @@ Match regexp against article full texts.
 
 ---
 
+### Keyword Matcher
+
 ![](architecture.drawio-8.svg)
 
-**keyword-matcher** retrieves articles, matches against predefined regexes, puts successful matches on **match_urls** queue
+Retrieves articles, matches against predefined regexes, puts successful matches on **match_urls** queue
 
 ---
 
@@ -115,9 +123,13 @@ Strange Loop
 
 ---
 
+### Pocket Integration
+
 ![](architecture.drawio-7.svg)
 
 ---
+
+### Fivefilters
 
 ![](architecture.drawio-6.svg)
 
@@ -168,17 +180,19 @@ queue.WithArticleUrls(func(m *nats.Msg) {
 
 ---
 
-![](architecture.drawio-6.svg)
-
----
+#### First implementation with Python
 
 ![](architecture.drawio-6-python.svg)
 
 ---
 
+#### Re-implementations with Go
+
 ![](architecture.drawio-6-go.svg)
 
 ---
+
+#### Why not both?
 
 ![](architecture.drawio-6-python-go.svg)
 
@@ -206,11 +220,13 @@ Its complicated.
 
 ---
 
+### Bottleneck: Keyword Matcher
+
 ![](architecture.drawio-6.svg)
 
 ---
 
-### Scaling with docker compose
+### So lets scale it with docker compose
 
 ```yaml
 keyword-matcher-go:
@@ -257,6 +273,12 @@ keyword-matcher-go:
 ![](architecture.drawio-5.svg)
 
 ---
+
+![](architecture.drawio-4.svg)
+
+---
+
+### Bottleneck: Fivefilters
 
 ![](architecture.drawio-4.svg)
 
@@ -341,7 +363,7 @@ services:
 
 ---
 
-## ![](architecture.drawio-1.svg)
+![](architecture.drawio-1.svg)
 
 ---
 
@@ -365,9 +387,11 @@ services:
 
 ---
 
-![](nats-horizontal-color.png)
+Cloud-native Principles
 
-Polyglotness + Scalability
+==
+
+Supercharge your Possibilities
 
 ---
 
@@ -386,28 +410,55 @@ Polyglotness + Scalability
 
 ---
 
+#### Tiny design decision - huge impact
+
+| Measure       | Effort | Win                                           |
+| ------------- | ------ | --------------------------------------------- |
+| NATS          | medium | Use 29 languages, de-duplication, persistence |
+| + Docker      | low    | Scale                                         |
+| + nginx       | low    | Scale even better                             |
+| + Loki Driver | low    | Mighty observability stack                    |
+| + Grafana     | low    | Dashboard                                     |
+
+---
+
+#### "Throw-away mode" in Grafana
+
+![](grafana-provisioned.png)
+
+---
+
 ### Beauty of Open Source (at GitHub)
 
 ---
 
+#### GitHub employees have your back ❤️
+
 ![](cool-github-1.png)
 
-GitHub employees have your back ❤️
-
 ---
+
+#### GitHub bots have your back ❤️
 
 ![](cool-github-2.png)
 
-GitHub bots have your back ❤️
-
 ---
+
+#### The community is talking code ❤️
 
 ![](cool-github-3.png)
 
-The community is talking code ❤️
-
 ---
 
-## Links
+#### The community is talking code ❤️
 
-- <https://github.com/heussd/nats-news-analysis>
+![](cool-github-4.png)
+
+<!-- section -->
+
+## Thank you
+
+CNCF, GitHub, Docker, NATS FTW
+
+<https://github.com/heussd/nats-news-analysis>
+<https://github.com/heussd/talk-polyglot-scalable-observable-news-analysis>
