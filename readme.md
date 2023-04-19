@@ -377,6 +377,40 @@ services:
 
 ## 🙌 Hands on 🙌
 
+---
+
+### Starting Point
+
+![](handson-4.png)
+
+---
+
+### Add feeder
+
+![](handson-3.png)
+
+---
+
+### Add 2nd feeder
+
+![](handson-2.png)
+
+---
+
+### Add Keyword Matcher
+
+![](handson-1.png)
+
+---
+
+### PUMP IT
+
+![](handson-0.png)
+
+---
+
+![](dashboard.png)
+
 <!-- section -->
 
 ## Reflections
