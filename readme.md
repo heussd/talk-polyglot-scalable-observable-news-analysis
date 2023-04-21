@@ -7,7 +7,13 @@ revealOptions:
   transition: "fade"
 ---
 
-# Polyglot, scalable, observable news analysis
+<style>
+h1{
+    font-size: 42pt !important;
+}
+</style>
+
+# Polyglot | scalable | observable news analysis
 
 Timm Heuss
 
@@ -17,7 +23,7 @@ April 2023
 
 <!-- .slide: data-background="https://i.stack.imgur.com/wVfnh.jpg" -->
 
-<!-- section -->
+---
 
 This low-key session will be about a custom news crawling and analysis solution I've been building and improving for years now. The talk will cover the challenges I faced and how I evolved the architecture over time to eventually end up with a scalable, polyglot, observable system. We will also reflect about the beauty of open source on GitHub and message queues. In the hands-on session, we will scale the application interactively and monitor the performance in real-time.
 
@@ -29,9 +35,13 @@ Tech-Keywords: Docker, NATS.io, Prometheus, Loki, Grafana, Golang, Python
 
 ---
 
-1. Staying up to date is key.
-1. But there's too much information out there.
-1. Also, don't trust centralised approaches.
+Staying up to date is key.
+
+But there's too much information out there.
+
+Also, don't trust centralized approaches.
+
+So...
 
 ---
 
@@ -71,11 +81,11 @@ Match regexp against article full texts.
 
 ## Basic components
 
-- NATS queue
-- Article URL Feeder
-- Keyword Matcher
-- Pocket Integration
-- Fivefilters
+- NATS queue <!-- .element: class="fragment" data-fragment-index="2" -->
+- Article URL Feeder <!-- .element: class="fragment" data-fragment-index="2" -->
+- Keyword Matcher <!-- .element: class="fragment" data-fragment-index="2" -->
+- Pocket Integration <!-- .element: class="fragment" data-fragment-index="2" -->
+- Fivefilters <!-- .element: class="fragment" data-fragment-index="2" -->
 
 ---
 
@@ -159,10 +169,6 @@ queue.WithArticleUrls(func(m *nats.Msg) {
 
 <!-- section -->
 
-![](architecture.drawio-6.svg)
-
-<!-- section -->
-
 ## Polyglotness
 
 ![](nats-horizontal-color.png)
@@ -208,9 +214,11 @@ queue.WithArticleUrls(func(m *nats.Msg) {
 
 ---
 
-### Python vs. Go execution performance?
+### Python vs. Go matching performance?
 
-Its complicated.
+Python's regex engine matches differently compared to Go's (third-party) engine ☹️
+
+Python tends to overmatch, leading to better matching performance in the statistics - which is misleading.
 
 <!-- section -->
 
